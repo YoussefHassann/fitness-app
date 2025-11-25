@@ -1,6 +1,8 @@
 "use client";
 
 import type React from "react";
+import PhoneInput from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,8 @@ import {
   MapPin,
   Globe,
 } from "lucide-react";
+
+
 
 // A simple component for social login buttons for better reusability
 const SocialLogins = () => (
@@ -80,6 +84,23 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState(initialRegisterData);
+  const [submitted, setSubmitted] = useState(false);
+  const [nameWarning, setNameWarning] = useState("");
+  const MAX_NAME_LENGTH = 30;
+  const MIN_PASSWORD_LENGTH = 6;
+  const MAX_PASSWORD_LENGTH = 18;
+
+// Regex explanation:
+// (?=.*[a-z])      -> at least one lowercase
+// (?=.*[A-Z])      -> at least one uppercase
+// (?=.*\d)         -> at least one number
+// (?=.*[!@#$%^&*]) -> at least one special char
+const PASSWORD_PATTERN =
+  "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{" +
+  MIN_PASSWORD_LENGTH +
+  "," +
+  MAX_PASSWORD_LENGTH +
+  "}$";
 
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -143,6 +164,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     async (e: React.FormEvent) => {
       e.preventDefault();
       setMessage(null);
+      setSubmitted(true);
       const name = registerData.name.trim();
       const email = registerData.email.trim();
       const password = registerData.password;
@@ -151,6 +173,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       const address = registerData.address.trim();
       const country = registerData.country.trim();
       const userType = (registerData.user_type || "").toLowerCase();
+
 
       if (!name) {
         setMessage({ type: "error", text: "Please enter your name." });
@@ -161,7 +184,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         return;
       }
       if (!validatePassword(password)) {
-        setMessage({ type: "error", text: "Password must be at least 8 characters." });
+        setMessage({ type: "error", text: "Password must be at least 6 characters." });
         return;
       }
       if (password !== confirm) {
@@ -185,7 +208,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         );
         if (response.success) {
           // Improve flow: switch to login, prefill email
-          setMessage({ type: "success", text: "Account created successfully! Please sign in." });
+          setMessage({ type: "success", text: " Account created successfully! Please sign in." });
           setActiveTab("login");
           setLoginData({ email, password: "" });
         } else {
@@ -213,7 +236,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (!validatePassword(registerData.password)) {
       setMessage({
         type: "error",
-        text: "Password must be at least 8 characters.",
+        text: "Password must be at least 6 characters.",
       });
       return;
     }
@@ -266,7 +289,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       if (!validatePassword(newPassword)) {
         setMessage({
           type: "error",
-          text: "New password must be at least 8 characters.",
+          text: "New password must be at least 6 characters.",
         });
         return;
       }
@@ -445,7 +468,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     </button>
                   </div>
                   {loginData.password && !validatePassword(loginData.password) && (
-                    <p className="text-sm text-red-600">Password must be at least 8 characters.</p>
+                    <p className="text-sm text-red-600">Password must be at least 6 characters.</p>
                   )}
                 </div>
                 <Button
@@ -483,19 +506,43 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                       <Label htmlFor="register-name">Full Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="register-name"
-                          placeholder="John Doe"
-                          value={registerData.name}
-                          onChange={(e) =>
-                            setRegisterData({
-                              ...registerData,
-                              name: e.target.value,
-                            })
-                          }
-                          className="pl-10 h-11"
-                          required
-                        />
+                        
+                      
+                          <Input
+                                id="register-name"
+                                maxLength={30}
+                                placeholder="Enter Your Name."
+                                value={registerData.name}
+                                onChange={(e) => {
+                                  const rawValue = e.target.value;
+                                  const cleanedValue = rawValue.replace(/[^a-zA-Z\s]/g, "");
+
+                                  // Update the input (filtered)
+                                  setRegisterData({ ...registerData, name: cleanedValue });
+
+                                  // If the user tried to type something invalid, show a warning
+                                  if (rawValue !== cleanedValue) {
+                                    setNameWarning("⚠️ Name cannot include numbers or special characters.");
+                                    
+                                    // Auto-hide the warning after 2 seconds
+                                    setTimeout(() => setNameWarning(""), 2000);
+                                  }
+                                  if (cleanedValue.length === MAX_NAME_LENGTH) {
+                                       setNameWarning(`⚠️  Maximum ${MAX_NAME_LENGTH} characters allowed.`);
+                                       setTimeout(() => setNameWarning(""), 2000);
+                                     }
+                                }}
+                                className="pl-10 h-11"
+                                required
+                              />
+
+                              {nameWarning && (
+                                <p className="text-sm text-yellow-600 mt-1 transition-opacity duration-300">
+                                  {nameWarning}
+                                </p>
+                              )}
+
+
                       </div>
                       {registerData.name !== "" && registerData.name.trim() === "" && (
                         <p className="text-sm text-red-600">Please enter your name.</p>
@@ -529,17 +576,22 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         <Label htmlFor="register-password">Password</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          {/* password */}
+                         
                           <Input
                             id="register-password"
                             type={showRegisterPassword ? "text" : "password"}
                             placeholder="••••••••"
+                            minLength={MIN_PASSWORD_LENGTH}
+                            maxLength={MAX_PASSWORD_LENGTH}
+                            pattern={PASSWORD_PATTERN}
                             value={registerData.password}
                             onChange={(e) =>
                               setRegisterData({
                                 ...registerData,
                                 password: e.target.value,
                               })
-                            }
+                            } 
                             className="pl-10 pr-10 h-11"
                             required
                           />
@@ -556,7 +608,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                           </button>
                         </div>
                         {registerData.password && !validatePassword(registerData.password) && (
-                          <p className="text-sm text-red-600">Password must be at least 8 characters.</p>
+                          <p className="text-sm text-red-600">Password must be at least 6 characters.</p>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -618,7 +670,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         <option value="Coach">Coach</option>
                         <option value="Trainee">Trainee</option>
                       </select>
-                      {registerData.user_type === "" && (
+                      { submitted && registerData.user_type === "" && (
                         <p className="text-sm text-red-600">Please select a user type.</p>
                       )}
                     </div>
@@ -634,7 +686,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 )}
                 {registerStep === 2 && (
                   <div className="space-y-4">
-                    <div className="space-y-1">
+                    {/* <div className="space-y-1">
                       <Label htmlFor="register-phone">
                         Phone Number (Optional)
                       </Label>
@@ -654,7 +706,48 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                           className="pl-10 h-11"
                         />
                       </div>
-                    </div>
+                    </div> */}
+                    <div className="space-y-1">
+                          <Label htmlFor="register-phone">Phone Number (Optional)</Label>
+                          <div className="relative">
+                            {/* Phone icon */}
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
+
+                            {/* Dynamic phone input */}
+                            <PhoneInput
+                              country={"eg"} // Default country (change as needed)
+                              value={registerData.phone}
+                              onChange={(value) =>
+                                setRegisterData({ ...registerData, phone: value })
+                              }
+                              inputStyle={{
+                                width: "100%",
+                                height: "44px",
+                                fontSize: "14px",
+                                borderRadius: "8px",
+                                border: "1px solid #d1d5db",
+                                paddingLeft: "48px", // space for the icon
+                              }}
+                              buttonStyle={{
+                                border: "1px solid #d1d5db",
+                                backgroundColor: "#f9fafb",
+                              }}
+                              containerStyle={{ width: "100%" }}
+                              inputProps={{
+                                name: "phone",
+                                id: "register-phone",
+                              }}
+                            />
+                          </div>
+
+                          {/* Warning message */}
+                          {!registerData.phone.startsWith("+") && registerData.phone && (
+                            <p className="text-sm text-red-600">
+                              ⚠️ The country code number is missed in the phone number field.
+                            </p>
+                          )}
+                      </div>
+
                     <div className="space-y-1">
                       <Label htmlFor="register-country">
                         Country (Optional)
@@ -792,7 +885,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         required
                       />
                       {!validatePassword(newPassword) && newPassword !== "" && (
-                        <p className="text-sm text-red-600 mt-2">New password must be at least 8 characters.</p>
+                        <p className="text-sm text-red-600 mt-2">New password must be at least 6 characters.</p>
                       )}
                       <button
                         type="button"

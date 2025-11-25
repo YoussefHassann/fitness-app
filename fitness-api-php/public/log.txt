@@ -1,1 +1,1 @@
-URL Detected: AdminNotifications/getAdminNotifications
+URL Detected: Services/getAll
